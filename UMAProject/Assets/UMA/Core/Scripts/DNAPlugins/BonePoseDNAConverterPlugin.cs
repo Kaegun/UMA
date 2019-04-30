@@ -320,12 +320,6 @@ namespace UMA
 
 			public void ApplyDNA(UMAData umaData, UMASkeleton skeleton, UMADnaBase activeDNA, float masterWeight = 1f)
 			{
-				if (_poseToApply == null)
-				{
-					if (Debug.isDebugBuild)
-						Debug.LogWarning(umaData.gameObject.name + " had an invalid or empty pose set in its BonePoseDNAConverters in its DNAConverterController");
-					return;
-				}
 				_livePoseWeight = _startingPoseWeight;
 
 				//dna weight superceeds startingWeight if it exists
@@ -341,12 +335,6 @@ namespace UMA
 
 			public void ApplyDNA(UMAData umaData, UMASkeleton skeleton, int dnaTypeHash, float masterWeight = 1f)
 			{
-				if (_poseToApply == null)
-				{
-					if (Debug.isDebugBuild)
-						Debug.LogWarning(umaData.gameObject.name + " had an invalid or empty pose set in its BonePoseDNAConverters in its DNAConverterController");
-					return;
-				}
 				_livePoseWeight = _startingPoseWeight;
 
 				//dna weight superceeds startingWeight if it exists

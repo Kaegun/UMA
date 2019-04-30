@@ -126,34 +126,23 @@ namespace UMA
 		/// <summary>
 		/// Callback event when character has been updated.
 		/// </summary>
-		public event Action<UMAData> OnCharacterUpdated { add { if (CharacterUpdated == null) CharacterUpdated = new UMADataEvent(); CharacterUpdated.AddAction(value); } remove { CharacterUpdated.RemoveAction(value); } }
+		public event Action<UMAData> OnCharacterUpdated { add { if (CharacterUpdated == null) CharacterUpdated = new UMADataEvent(); CharacterUpdated.AddListener(new UnityAction<UMAData>(value)); } remove { CharacterUpdated.RemoveListener(new UnityAction<UMAData>(value)); } }
 		/// <summary>
 		/// Callback event when character has been completely created.
 		/// </summary>
-		public event Action<UMAData> OnCharacterCreated { add { if (CharacterCreated == null) CharacterCreated = new UMADataEvent(); CharacterCreated.AddAction(value); } remove { CharacterCreated.RemoveAction(value); } }
+		public event Action<UMAData> OnCharacterCreated { add { if (CharacterCreated == null) CharacterCreated = new UMADataEvent(); CharacterCreated.AddListener(new UnityAction<UMAData>(value)); } remove { CharacterCreated.RemoveListener(new UnityAction<UMAData>(value)); } }
 		/// <summary>
 		/// Callback event when character has been destroyed.
 		/// </summary>
-		public event Action<UMAData> OnCharacterDestroyed { add { if (CharacterDestroyed == null) CharacterDestroyed = new UMADataEvent(); CharacterDestroyed.AddAction(value); } remove { CharacterDestroyed.RemoveAction(value); } }
+		public event Action<UMAData> OnCharacterDestroyed { add { if (CharacterDestroyed == null) CharacterDestroyed = new UMADataEvent(); CharacterDestroyed.AddListener(new UnityAction<UMAData>(value)); } remove { CharacterDestroyed.RemoveListener(new UnityAction<UMAData>(value)); } }
 
 		/// <summary>
 		/// Callback event when character DNA has been updated.
 		/// </summary>
-		public event Action<UMAData> OnCharacterDnaUpdated { add { if (CharacterDnaUpdated == null) CharacterDnaUpdated = new UMADataEvent(); CharacterDnaUpdated.AddAction(value); } remove { CharacterDnaUpdated.RemoveAction(value); } }
-		/// <summary>
-		/// Callback event used by UMA to make last minute tweaks
-		/// </summary>
-		public event Action<UMAData> OnCharacterBeforeUpdated { add { if (CharacterBeforeUpdated == null) CharacterBeforeUpdated = new UMADataEvent(); CharacterBeforeUpdated.AddAction(value);} remove { CharacterBeforeUpdated.RemoveAction(value); } }
-		/// <summary>
-		/// Callback event used by UMA to make last minute tweaks
-		/// </summary>
-		public event Action<UMAData> OnCharacterBeforeDnaUpdated { add { if (CharacterBeforeDnaUpdated == null) CharacterBeforeDnaUpdated = new UMADataEvent(); CharacterBeforeDnaUpdated.AddAction(value);} remove { CharacterBeforeDnaUpdated.RemoveAction(value); } }
-
+		public event Action<UMAData> OnCharacterDnaUpdated { add { if (CharacterDnaUpdated == null) CharacterDnaUpdated = new UMADataEvent(); CharacterDnaUpdated.AddListener(new UnityAction<UMAData>(value)); } remove { CharacterDnaUpdated.RemoveListener(new UnityAction<UMAData>(value)); } }
 		public UMADataEvent CharacterCreated;
 		public UMADataEvent CharacterDestroyed;
 		public UMADataEvent CharacterUpdated;
-		public UMADataEvent CharacterBeforeUpdated;
-		public UMADataEvent CharacterBeforeDnaUpdated;
 		public UMADataEvent CharacterDnaUpdated;
 		public UMADataEvent CharacterBegun;
 
@@ -878,20 +867,25 @@ namespace UMA
 			public void PreApplyDNA(UMAData umaData, bool fixUpUMADnaToDynamicUMADna = false)
 			{
 				EnsureAllDNAPresent();
-				//clear any color adjusters from all overlays in the recipe
-				umaData.umaRecipe.ClearOverlayColorAdjusters();
+				bool fixup = false;
+				//DynamicUMADna:: when loading an older recipe that has UMADnaHumanoid/Tutorial into a race that now uses DynamicUmaDna the following wont work
+				//so check that and fix it if it happens
+				if (fixUpUMADnaToDynamicUMADna)
+				{
+					DynamicDNAConverterBehaviourBase.FixUpUMADnaToDynamicUMADna(this);
+				}
+				else
+				{
+					//clear any color adjusters from all overlays in the recipe
+					//Only do this if we havent looped back to fixup dna
+					umaData.umaRecipe.ClearOverlayColorAdjusters();
+				}
 				foreach (var dnaEntry in umaDna)
 				{
 					//DynamicDNAPlugins FEATURE: Allow more than one converter to use the same dna
 					List<DNAConvertDelegate> dnaConverters;
 					this.umaDNAPreApplyConverters.TryGetValue(dnaEntry.Key, out dnaConverters);
-					//DynamicUMADna:: when loading an older recipe that has UMADnaHumanoid/Tutorial into a race that now uses DynamicUmaDna the following wont work
-					//so check that and fix it if it happens
-					if (dnaConverters == null || dnaConverters.Count == 0)
-					{
-						DynamicDNAConverterBehaviourBase.FixUpUMADnaToDynamicUMADna(this);
-						this.umaDNAPreApplyConverters.TryGetValue(dnaEntry.Key, out dnaConverters);
-					}
+
 					if (dnaConverters != null && dnaConverters.Count > 0)
 					{
 						for (int i = 0; i < dnaConverters.Count; i++)
@@ -899,6 +893,18 @@ namespace UMA
 							dnaConverters[i](umaData, umaData.GetSkeleton());
 						}
 					}
+					else
+					{
+						//DynamicUMADna:: try again this time calling FixUpUMADnaToDynamicUMADna first
+						if (fixUpUMADnaToDynamicUMADna == false)
+						{
+							fixup = true;
+						}
+					}
+				}
+				if (fixup)
+				{
+					PreApplyDNA(umaData, true);
 				}
 			}
 
@@ -1172,11 +1178,6 @@ namespace UMA
 		public void FireUpdatedEvent(bool cancelled)
 		{
 			this.cancelled = cancelled;
-			if (CharacterBeforeUpdated != null)
-			{
-				CharacterBeforeUpdated.Invoke(this);
-			}
-
 			if (!this.cancelled && !isOfficiallyCreated)
 			{
 				isOfficiallyCreated = true;
@@ -1522,11 +1523,6 @@ namespace UMA
 		/// </summary>
 		public void FireDNAAppliedEvents()
 		{
-			if (CharacterBeforeDnaUpdated != null)
-			{
-				CharacterBeforeDnaUpdated.Invoke(this);
-			}
-
 			if (CharacterDnaUpdated != null)
 			{
 				CharacterDnaUpdated.Invoke(this);
