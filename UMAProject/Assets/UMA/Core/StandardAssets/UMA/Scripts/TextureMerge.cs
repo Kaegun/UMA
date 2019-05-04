@@ -32,7 +32,7 @@ namespace UMA
 			public Rect rect;
 		}
 
-		public void DrawAllRects(RenderTexture target, Color background = default(Color))
+		public void DrawAllRects(RenderTexture target, int width, int height, Color background = default(Color))
 		{
 			if (textureMergeRects != null)
 			{
@@ -40,7 +40,8 @@ namespace UMA
 				RenderTexture.active = target;
 				GL.Clear(true, true, background);
 				GL.PushMatrix();
-				GL.LoadPixelMatrix(0, target.width, target.height, 0);
+				//the matrix needs to be in the original atlas dimensions because the textureMergeRects are in that space.
+				GL.LoadPixelMatrix(0, width, height, 0); 
 
 				for (int i = 0; i < textureMergeRectCount; i++)
 				{

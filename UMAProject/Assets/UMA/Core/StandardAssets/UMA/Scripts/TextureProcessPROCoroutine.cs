@@ -103,7 +103,7 @@ namespace UMA
 					 destinationTexture.useMipMap = umaGenerator.convertMipMaps && !umaGenerator.convertRenderTexture;
 
 					 //Draw all the Rects here
-					 textureMerge.DrawAllRects(destinationTexture, UMAMaterial.GetBackgroundColor(slotData.asset.material.channels[textureType].channelType));
+					 textureMerge.DrawAllRects(destinationTexture, width, height, UMAMaterial.GetBackgroundColor(slotData.asset.material.channels[textureType].channelType));
 
 					 //Post Process
 					 textureMerge.PostProcess(destinationTexture, slotData.asset.material.channels[textureType].channelType);
